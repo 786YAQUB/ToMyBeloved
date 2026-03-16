@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Romantic Proposal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&display=swap');
+
+        :root {
+            --bg-color: #080205;
+            --deep-red: #800020;
+            --primary-rose: #ff4d6d;
+            --accent-gold: #ffcc33;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: crosshair;
+        }
+
+        #canvas-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #2b0314 0%, #080205 100%);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+            width: 100%;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFade 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards 1.5s;
+        }
+
+        h1 {
+            font-family: 'Great Vibes', cursive;
+            background: linear-gradient(
+                to bottom, 
+                #ffffff 0%, 
+                #ff99ac 30%, 
+                var(--primary-rose) 50%, 
+                var(--deep-red) 100%
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            
+            font-size: clamp(3rem, 12vw, 7rem);
+            margin: 0;
+            filter: drop-shadow(0 0 20px rgba(255, 77, 109, 0.4));
+            padding-bottom: 10px;
+        }
+
+        .subtitle {
+            font-family: 'Cinzel', serif;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: clamp(0.8rem, 3vw, 1.2rem);
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            margin-top: -10px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .hint {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.2);
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            animation: breathe 4s infinite ease-in-out;
+        }
+
+        @keyframes slideUpFade {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.4; transform: translateX(-50%) scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="heartCanvas"></canvas>
+    </div>
+
+    <div class="overlay" id="textOverlay">
+        <h1>I Love You</h1>
+        <div class="subtitle">Forever & Ever</div>
+    </div>
+
+    <div class="hint">A Touch of Love</div>
+
+    <script>
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('textOverlay');
+
+        let width, height;
+        let particles = [];
+        let petals = [];
+        let bokeh = [];
+        let bursts = [];
+        const particleCount = 850; 
+
+        // Parallax effect on mouse move
+        window.addEventListener('mousemove', (e) => {
+            const moveX = (e.clientX - width/2) / 60;
+            const moveY = (e.clientY - height/2) / 60;
+            overlay.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        });
+
+        function init() {
+            resize();
+            createBokeh();
+            createPetals();
+            createParticles();
+            animate();
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            // Update particle base scale on resize to keep heart properly sized
+            particles.forEach(p => {
+                p.baseScale = Math.min(width, height) / 30;
+            });
+        }
+
+        window.addEventListener('resize', resize);
+
+        function createBokeh() {
+            bokeh = [];
+            for(let i = 0; i < 40; i++) {
+                bokeh.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 40 + 20,
+                    opacity: Math.random() * 0.1,
+                    speed: Math.random() * 0.3 + 0.1
+                });
+            }
+        }
+
+        function createPetals() {
+            petals = [];
+            for(let i = 0; i < 50; i++) {
+                petals.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height - height,
+                    size: Math.random() * 10 + 5,
+                    speed: Math.random() * 1 + 0.5,
+                    swing: Math.random() * 2,
+                    swingSpeed: Math.random() * 0.02,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotateSpeed: (Math.random() - 0.5) * 0.02
+                });
+            }
+        }
+
+        function getHeartPoint(t) {
+            // Heart curve formula
+            const x = 16 * Math.pow(Math.sin(t), 3);
+            const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+            return { x, y };
+        }
+
+        function drawPetal(x, y, size, rotation) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+            ctx.fillStyle = 'rgba(255, 77, 109, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.bezierCurveTo(size, -size, size * 2, size, 0, size * 2);
+            ctx.bezierCurveTo(-size * 2, size, -size, -size, 0, 0);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        class Particle {
+            constructor(isBurst = false, x, y) {
+                this.isBurst = isBurst;
+                this.init(x, y);
+            }
+
+            init(x, y) {
+                this.t = Math.random() * Math.PI * 2;
+                
+                // Responsive scaling for the heart
+                this.baseScale = Math.min(width, height) / 30; 
+
+                if (this.isBurst) {
+                    this.x = x;
+                    this.y = y;
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 6 + 2;
+                    this.vx = Math.cos(angle) * speed;
+                    this.vy = Math.sin(angle) * speed;
+                    this.life = 1.0;
+                    this.decay = Math.random() * 0.015 + 0.005;
+                    this.size = Math.random() * 4 + 1;
+                } else {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.speed = Math.random() * 0.03 + 0.015; // Slightly faster convergence
+                    this.size = Math.random() * 2 + 0.5;
+                }
+                
+                const hue = Math.random() * 20 + 340; 
+                this.color = `hsla(${hue}, 80%, 60%, 1)`;
+            }
+
+            update() {
+                if (this.isBurst) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vy += 0.04; 
+                    this.life -= this.decay;
+                } else {
+                    // Heartbeat logic
+                    const time = Date.now() * 0.001;
+                    const heartbeat = 1 + Math.pow(Math.sin(time * 2), 4) * 0.08; 
+                    
+                    const point = getHeartPoint(this.t);
+                    const currentScale = this.baseScale * heartbeat;
+                    
+                    // Offset Y slightly to account for the shape of the curve to keep it centered visually
+                    this.targetX = width / 2 + point.x * currentScale;
+                    this.targetY = (height / 2 - (2 * currentScale)) + point.y * currentScale;
+
+                    this.x += (this.targetX - this.x) * this.speed;
+                    this.y += (this.targetY - this.y) * this.speed;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.isBurst ? this.life : 0.7;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawBackground() {
+            // Bokeh lights
+            bokeh.forEach(b => {
+                ctx.fillStyle = 'rgba(255, 77, 109, 1)';
+                ctx.globalAlpha = b.opacity * (0.5 + Math.sin(Date.now() * 0.001 + b.x) * 0.5);
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+                ctx.fill();
+                b.y -= b.speed;
+                if(b.y < -b.size) b.y = height + b.size;
+            });
+
+            // Falling petals
+            petals.forEach(p => {
+                p.y += p.speed;
+                p.x += Math.sin(Date.now() * p.swingSpeed) * p.swing;
+                p.rotation += p.rotateSpeed;
+                drawPetal(p.x, p.y, p.size, p.rotation);
+                if(p.y > height + 20) {
+                    p.y = -20;
+                    p.x = Math.random() * width;
+                }
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(8, 2, 5, 0.2)'; 
+            ctx.fillRect(0, 0, width, height);
+
+            drawBackground();
+
+            // Glow for the heartbeat heart
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = 'rgba(255, 77, 109, 0.6)';
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            ctx.shadowBlur = 0;
+
+            for (let i = bursts.length - 1; i >= 0; i--) {
+                bursts[i].update();
+                bursts[i].draw();
+                if (bursts[i].life <= 0) bursts.splice(i, 1);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function createParticles() {
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function handleInteraction(x, y) {
+            for (let i = 0; i < 25; i++) {
+                bursts.push(new Particle(true, x, y));
+            }
+        }
+
+        window.addEventListener('mousedown', (e) => handleInteraction(e.clientX, e.clientY));
+        window.addEventListener('touchstart', (e) => {
+            handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
+        });
+
+        init();
+    </script>
+</body>
+</html>
